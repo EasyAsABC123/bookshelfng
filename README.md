@@ -1,5 +1,37 @@
 # bookshelf
 
+## Snapetech BookshelfNG fork
+
+This public fork publishes SeerrNG-compatible images at:
+
+    ghcr.io/snapetech/bookshelfng:softcover
+    ghcr.io/snapetech/bookshelfng:hardcover
+
+The `softcover` image includes a compatibility fix for SeerrNG and other
+Readarr-compatible clients: `/api/v1/book/lookup` returns nested author and
+edition metadata when Bookshelf can resolve it. Without that fix, softcover
+lookups can return `editions: []` even when they include `foreignEditionId`,
+which makes downstream book-add calls unreliable.
+
+Use `softcover` when migrating an existing Readarr-compatible database. Use
+`hardcover` only for a fresh deployment that is prepared for Hardcover metadata.
+
+Image tags are published by GitHub Actions:
+
+- `softcover`
+- `softcover-v0.4.20`
+- `softcover-v0.4.20.<run-number>`
+- `hardcover`
+- `hardcover-v0.4.20`
+- `hardcover-v0.4.20.<run-number>`
+
+If anonymous `docker pull ghcr.io/snapetech/bookshelfng:softcover` returns
+`denied`, the GHCR package visibility still needs to be changed to public in
+GitHub package settings, or Docker needs to be authenticated with package read
+access.
+
+## Upstream project
+
 This is a revival of [Readarr](https://github.com/Readarr/Readarr). The images
 published are configured to use working Goodreads or Hardcover metadata out of
 the box.
