@@ -9,10 +9,14 @@ on:
     branches: [develop, master]
     paths-ignore:
       - ".github/**"
+      - "README.md"
+      - "docs/**"
       - "src/Readarr.Api.*/openapi.json"
   pull_request:
     paths-ignore:
       - ".github/**"
+      - "README.md"
+      - "docs/**"
       - "src/NzbDrone.Core/Localization/Core"
       - "src/Readarr.Api.*/openapi.json"
 
