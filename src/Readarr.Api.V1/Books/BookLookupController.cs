@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.MetadataSource;
+using Readarr.Api.V1.Author;
 using Readarr.Http;
 
 namespace Readarr.Api.V1.Books
@@ -31,6 +32,8 @@ namespace Readarr.Api.V1.Books
             foreach (var currentBook in books)
             {
                 var resource = currentBook.ToResource();
+                resource.Author = currentBook.Author.Value.ToResource();
+                resource.Editions = currentBook.Editions.Value.ToResource();
 
                 _coverMapper.ConvertToLocalUrls(resource.Id, MediaCoverEntity.Book, resource.Images);
 
