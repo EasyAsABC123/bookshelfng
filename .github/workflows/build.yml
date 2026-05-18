@@ -6,7 +6,8 @@ permissions:
 on:
   workflow_dispatch:
   push:
-    branches: [develop, master]
+    tags:
+      - "main-*"
     paths-ignore:
       - ".github/**"
       - "README.md"
@@ -34,7 +35,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
+
+      - name: Require main release tag
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_NAME}" != main-* ]]; then
+            echo "Image publishing requires a main-* tag, got ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+          git fetch --force origin master main --tags || true
+          if git rev-parse --verify origin/main >/dev/null 2>&1; then
+            main_ref=origin/main
+          else
+            main_ref=origin/master
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "$main_ref"; then
+            echo "Tag ${GITHUB_REF_NAME} must point at a commit on ${main_ref}." >&2
+            exit 1
+          fi
 
       - uses: jdx/mise-action@v3
 
@@ -113,7 +134,9 @@ jobs:
       - uses: docker/metadata-action@v5
         id: gr_meta
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            docker.io/snapetech/bookshelfng
           tags: |
             type=raw,value=softcover
             type=raw,value=softcover-v${{ env.READARR_VERSION }}
@@ -122,7 +145,9 @@ jobs:
       - uses: docker/metadata-action@v5
         id: hc_meta
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            docker.io/snapetech/bookshelfng
           tags: |
             type=raw,value=hardcover
             type=raw,value=hardcover-v${{ env.READARR_VERSION }}
@@ -134,6 +159,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/login-action@v3
+        if: ${{ github.event_name == 'push' }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - uses: docker/build-push-action@v6
         with:
