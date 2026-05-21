@@ -13,8 +13,31 @@ edition metadata when Bookshelf can resolve it. Without that fix, softcover
 lookups can return `editions: []` even when they include `foreignEditionId`,
 which makes downstream book-add calls unreliable.
 
-Use `softcover` when migrating an existing Readarr-compatible database. Use
-`hardcover` only for a fresh deployment that is prepared for Hardcover metadata.
+Use `softcover` when you need Goodreads-compatible metadata or when you are
+holding an existing Readarr-compatible database in place. Use `hardcover` for
+new deployments and for migrated deployments that have rebuilt their books
+against Hardcover metadata.
+
+Do not switch an existing softcover/Readarr config to the `hardcover` image by
+changing only `METADATA_URL` or the container tag. Goodreads/softcover
+`ForeignAuthorId`, `ForeignBookId`, and `ForeignEditionId` values are not
+portable to Hardcover. A direct switch can leave books, authors, and editions
+that the Hardcover metadata provider cannot resolve.
+
+SeerrNG includes a migration helper for this transition. The supported path is:
+
+1. back up the existing ebook and audiobook config directories;
+2. inventory the source database;
+3. rebuild strict matches against a temporary Hardcover Bookshelf target;
+4. optionally use a softcover Bookshelf endpoint to recover metadata for stale
+   IDs;
+5. optionally use SeerrNG's deterministic local DB fallback for books that
+   Hardcover still cannot import.
+
+The last fallback creates local Bookshelf records with IDs such as
+`local:ebook:1076`. Those records are visible through the Bookshelf API, but
+they are not native Hardcover metadata records. That fallback is intentionally
+owned by the SeerrNG migration tool rather than the Bookshelf image.
 
 Image tags are published by GitHub Actions:
 
@@ -54,9 +77,9 @@ slop. However, it is backward-compatible with existing Readarr databases and
 functionality like Goodreads list imports should continue to work normally.
 
 The `hardcover` tags use [Hardcover](https://hardcover.app/home) as a metadata
-provider. This metadata is higher quality but isn't backward-compatible; if
-you're already running Readarr you'll need to redeploy this from scratch.
-Goodreads list imports haven't been tested and likely don't work.
+provider. This metadata is higher quality but isn't backward-compatible with
+Goodreads/softcover IDs. Goodreads list imports haven't been tested and likely
+don't work.
 
 ## Support
 
