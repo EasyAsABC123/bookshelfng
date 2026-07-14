@@ -62,5 +62,60 @@ namespace NzbDrone.Core.Test.Download.DownloadClientTests.QBittorrentTests
 
             action.Should().Throw<DownloadClientAuthenticationException>();
         }
+
+        [Test]
+        public void should_authenticate_with_api_key_without_logging_in()
+        {
+            _settings.ApiKey = "qbt_1234567890abcdefghijklmnopqr";
+            _settings.Username = null;
+            _settings.Password = null;
+
+            Mocker.GetMock<IHttpClient>()
+                  .Setup(v => v.Execute(It.IsAny<HttpRequest>()))
+                  .Returns<HttpRequest>(request =>
+                  {
+                      request.Url.FullUri.Should().NotEndWith("/api/v2/auth/login");
+                      request.Headers.GetSingleValue("Authorization").Should().Be($"Bearer {_settings.ApiKey}");
+
+                      return new HttpResponse(request, new HttpHeader(), "2.15.1");
+                  });
+
+            Subject.GetApiVersion(_settings).Should().Be(new Version(2, 15, 1));
+            Mocker.GetMock<IHttpClient>().Verify(v => v.Execute(It.IsAny<HttpRequest>()), Times.Once);
+        }
+
+        [TestCase(HttpStatusCode.Unauthorized)]
+        [TestCase(HttpStatusCode.Forbidden)]
+        public void should_reject_invalid_api_key(HttpStatusCode statusCode)
+        {
+            _settings.ApiKey = "qbt_1234567890abcdefghijklmnopqr";
+
+            Mocker.GetMock<IHttpClient>()
+                  .Setup(v => v.Execute(It.IsAny<HttpRequest>()))
+                  .Returns<HttpRequest>(request => new HttpResponse(request, new HttpHeader(), string.Empty, statusCode));
+
+            Action action = () => Subject.GetApiVersion(_settings);
+
+            action.Should().Throw<DownloadClientAuthenticationException>();
+            Mocker.GetMock<IHttpClient>().Verify(v => v.Execute(It.IsAny<HttpRequest>()), Times.Once);
+        }
+
+        [TestCase(HttpStatusCode.Unauthorized)]
+        [TestCase(HttpStatusCode.Forbidden)]
+        public void should_recognize_v2_api_when_api_key_requires_authentication(HttpStatusCode statusCode)
+        {
+            _settings.ApiKey = "qbt_1234567890abcdefghijklmnopqr";
+
+            Mocker.GetMock<IHttpClient>()
+                  .Setup(v => v.Execute(It.IsAny<HttpRequest>()))
+                  .Returns<HttpRequest>(request =>
+                  {
+                      request.Headers.GetSingleValue("Authorization").Should().Be($"Bearer {_settings.ApiKey}");
+
+                      return new HttpResponse(request, new HttpHeader(), string.Empty, statusCode);
+                  });
+
+            Subject.IsApiSupported(_settings).Should().BeTrue();
+        }
     }
 }
